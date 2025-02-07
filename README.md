@@ -191,14 +191,13 @@ project_base_path
 1. Crawling the dataset<br>
 
 - Run the below file for snapshot
-  -  snapshot-crawling.ipynb
+  -  crawling/snapshot-crawling.ipynb
 - Run the below file for goods
-  -   goodimage-crawling.ipynb<br>
+  -   crawling/goodimage-crawling.ipynb<br>
 
-2. After generating captions using GPT, structure the dataset
+2. After generating captions using GPT, structure the dataset.
 - Run the file
-
-  - make_data.ipynb
+  - crawling/make_data.ipynb
 
 
 
