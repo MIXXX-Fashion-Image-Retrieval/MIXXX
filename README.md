@@ -216,13 +216,20 @@ pip3 install fastapi uvicorn
 
 
 ## 3. Training
-
+```
+python src/blip_fine_tune_2.py
+```
 
 
 
 
 ## 4. Inference 
-
+```sh
+python src/blip_validate.py \
+   --dataset {'CIRR' or 'FashionIQ'} \
+   --blip-model-name {trained model name} \
+   --model-path {for path} 
+```
 
 
 
