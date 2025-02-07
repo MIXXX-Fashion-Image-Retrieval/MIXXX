@@ -185,7 +185,7 @@ project_base_path
             | split.dress.train.json
             | split.dress.val.json
             | ...
-```<br>
+```
 
 
 ## 1. Make Dataset
