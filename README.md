@@ -155,7 +155,6 @@ Our implementation is based on [CLIP4Cir](https://github.com/ABaldrati/CLIP4Cir)
 
 
 
-
 (판넬 사진)
 
 
@@ -186,7 +185,7 @@ project_base_path
             | split.dress.train.json
             | split.dress.val.json
             | ...
-```
+```<br>
 
 
 ## 1. Make Dataset
@@ -198,7 +197,8 @@ project_base_path
 
 
 
---------
+
+
 ## 2. Environment Setup
 For venv users
 ```
@@ -214,6 +214,7 @@ conda create MIXXX
 pip3 install fastapi uvicorn 
 ```
 
+
 ## 3. Training
 
 
@@ -224,11 +225,13 @@ pip3 install fastapi uvicorn
 
 
 
+
 ## 5. Web page 
 ```
 #Terminal 1
 npm start
 
+  
 #Terminal 2
 uvicorn main:app --reload 
 ```
@@ -237,14 +240,16 @@ uvicorn main:app --reload
 Google drive:
 
 
+
 ## 7. Acknowledgement
 Our implementation and development is based on [https://github.com/chunmeifeng/SPRC]
 
+
 ## 8. Members
-김준석 Data crawling, Data Preprocessing, Inference Code Setting
-문재원 Inference Code setting, Web Site Development(BE)
-윤상민 Data crawling, Web Site Development(FE)
-손채원 Web design
+김준석 Data crawling, Data Preprocessing, Inference Code Setting<br>
+문재원 Inference Code setting, Web Site Development(BE)<br>
+윤상민 Data crawling, Web Site Development(FE)<br>
+손채원 Web design<br>
 
 
 
