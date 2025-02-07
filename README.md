@@ -134,3 +134,51 @@ code and pre-trained weights for rerank model
 ### Acknowledgement
 Our implementation is based on [CLIP4Cir](https://github.com/ABaldrati/CLIP4Cir) and [LAVIS](https://github.com/salesforce/LAVIS).
 
+
+
+
+(판넬 사진)
+
+
+### 0. Dataset Overview
+The dataset is crawled from Musinsa, focusing on categories like hoodies, coats, and jeans. Using the crawled data, we generated descriptive captions with GPT-40 Mini.
+
+The dataset is structured in the format (snapshot, product image, descriptive caption) to align with the FashionIQ dataset, which is commonly used for model training in fashion-related tasks.
+
+Dataset has the following structure:
+
+```
+project_base_path
+└───  fashionIQ_dataset
+      └─── captions
+            | cap.dress.test.json
+            | cap.dress.train.json
+            | cap.dress.val.json
+            | ...
+            
+      └───  images
+            | B00006M009.jpg
+            | B00006M00B.jpg
+            | B00006M6IH.jpg
+            | ...
+            
+      └─── image_splits
+            | split.dress.test.json
+            | split.dress.train.json
+            | split.dress.val.json
+            | ...
+```
+
+
+#### 
+1. Crawling the dataset
+
+
+
+
+
+
+
+
+
+
