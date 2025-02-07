@@ -155,8 +155,7 @@ Our implementation is based on [CLIP4Cir](https://github.com/ABaldrati/CLIP4Cir)
 
 
 
-(판넬 사진)
-
+![MIXXX_panel](./assets/mixxx.png)
 
 ## 0. Dataset Overview
 The dataset is crawled from Musinsa, focusing on categories like hoodies, coats, and jeans. Using the crawled data, we generated descriptive captions with GPT-40 Mini.
