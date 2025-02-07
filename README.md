@@ -188,12 +188,17 @@ project_base_path
 
 
 ## 1. Make Dataset
-1. Crawling the dataset
+1. Crawling the dataset<br>
 
-
+- Run the below file for snapshot
+  -  snapshot-crawling.ipynb
+- Run the below file for goods
+  -   goodimage-crawling.ipynb<br>
 
 2. After generating captions using GPT, structure the dataset
+- Run the file
 
+  - make_data.ipynb
 
 
 
@@ -234,11 +239,11 @@ python src/blip_validate.py \
 
 ## 5. Web page 
 ```
-#Terminal 1
+#Terminal 1 for FE
 npm start
 
   
-#Terminal 2
+#Terminal 2 for BE
 uvicorn main:app --reload 
 ```
 
@@ -252,10 +257,10 @@ Our implementation and development is based on [https://github.com/chunmeifeng/S
 
 
 ## 8. Members
-김준석 Data crawling, Data Preprocessing, Inference Code Setting<br>
-문재원 Inference Code setting, Web Site Development(BE)<br>
-윤상민 Data crawling, Web Site Development(FE)<br>
-손채원 Web design<br>
+**김준석** Data crawling, Data Preprocessing, Inference Code Setting<br>
+**문재원** Inference Code setting, Web Site Development(BE)<br>
+**윤상민** Data crawling, Web Site Development(FE)<br>
+**손채원** Web design<br>
 
 
 
