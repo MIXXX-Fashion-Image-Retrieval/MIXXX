@@ -146,9 +146,10 @@ class FashionIQDataset(Dataset):
         # get triplets made by (reference_image, target_image, a pair of relative captions)
         self.triplets: List[dict] = []
         for dress_type in dress_types:
-            with open(base_path / 'fashionIQ_dataset' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
-                self.triplets.extend(json.load(f))
+            #with open(base_path / 'fashionIQ_dataset' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
+            #    self.triplets.extend(json.load(f))
 
+            with open(base_path / 'musinsa' / '')
         # get the image names
         self.image_names: list = []
         for dress_type in dress_types:

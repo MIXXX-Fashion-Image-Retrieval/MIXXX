@@ -23,7 +23,7 @@ from utils import collate_fn, update_train_running_results, set_train_bar_descri
 from validate_blip import compute_cirr_val_metrics, compute_fiq_val_metrics
 
 
-def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, model_path):
+def clip_finetune_fiq(gender: str, val_dress_types: List[str], blip_model_name, backbone):
     """
     Fine-tune CLIP on the FashionIQ dataset using as combining function the image-text element-wise sum
     :param train_dress_types: FashionIQ categories to train on
@@ -43,7 +43,7 @@ def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, mod
 
     # clip_model, clip_preprocess = clip.load(clip_model_name, device=device, jit=False)
     blip_model, _, txt_processors = load_model_and_preprocess(name=blip_model_name, model_type=backbone, is_eval=False, device=device)
-    checkpoint_path = model_path
+    checkpoint_path = f"model/{gender}/{val_dress_types[0]}/checkpoint.pt"
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
     msg = blip_model.load_state_dict(checkpoint[blip_model.__class__.__name__], strict=False)
@@ -65,6 +65,24 @@ def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, mod
         relative_val_datasets.append(relative_val_dataset)
         classic_val_dataset = FashionIQDataset('val', [dress_type], 'classic', preprocess, )
         classic_val_datasets.append(classic_val_dataset)
+]
+        # gender가 men ->  MusinsaDataset_m
+        # gender가 women -> MusinsaDataset_w
+            
+        if gender == "man":
+            relative_val_dataset = MusinsaDataset_m('val', [dress_type], 'relative', preprocess)
+            relative_val_datasets.append(relative_val_dataset)
+
+            classic_val_dataset = MusinsaDataset_m('val', [dress_type], 'classic', preprocess, )
+            classic_val_datasets.append(classic_val_dataset)
+        else:
+            relative_val_dataset = MusinsaDataset_w('val', [dress_type], 'relative', preprocess)
+            relative_val_datasets.append(relative_val_dataset)
+
+            classic_val_dataset = MusinsaDataset_w('val', [dress_type], 'classic', preprocess, )
+            classic_val_datasets.append(classic_val_dataset)
+
+
 
 
 
@@ -72,30 +90,38 @@ def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, mod
     recalls_at10 = []
     recalls_at50 = []
 
+    
+
     # Compute and log validation metrics for each validation dataset (which corresponds to a different
     # FashionIQ category)
     for relative_val_dataset, classic_val_dataset, idx in zip(relative_val_datasets, classic_val_datasets,
                                                                 idx_to_dress_mapping):
         
         index_features, index_names = extract_index_blip_features(classic_val_dataset, blip_model)
-        recall_at10, recall_at50 = compute_fiq_val_metrics(relative_val_dataset, blip_model,
-                                                            index_features, index_names, txt_processors)
         
-        recalls_at10.append(recall_at10)
-        recalls_at50.append(recall_at50)
-        torch.cuda.empty_cache()
+        #파일 이름. 아닐수도
+        top5_ = compute_fiq_val_metrics(relative_val_dataset, blip_model,
+        
 
-    results_dict = {}
-    for i in range(len(recalls_at10)):
-        results_dict[f'{idx_to_dress_mapping[i]}_recall_at10'] = recalls_at10[i]
-        results_dict[f'{idx_to_dress_mapping[i]}_recall_at50'] = recalls_at50[i]
-    results_dict.update({
-        f'average_recall_at10': mean(recalls_at10),
-        f'average_recall_at50': mean(recalls_at50),
-        f'average_recall': (mean(recalls_at50) + mean(recalls_at10)) / 2
-    })
+        #(goods name, url).. ㅍㅍ
+        top5_
+                     도도                                  index_features, index_names, txt_processors)
+       
+    #     recalls_at10.append(recall_at10)
+    #     recalls_at50.append(recall_at50)
+    #     torch.cuda.empty_cache()
 
-    print(json.dumps(results_dict, indent=4))
+    # results_dict = {}
+    # for i in range(len(recalls_at10)):
+    #     results_dict[f'{idx_to_dress_mapping[i]}_recall_at10'] = recalls_at10[i]
+    #     results_dict[f'{idx_to_dress_mapping[i]}_recall_at50'] = recalls_at50[i]
+    # results_dict.update({
+    #     f'average_recall_at10': mean(recalls_at10),
+    #     f'average_recall_at50': mean(recalls_at50),
+    #     f'average_recall': (mean(recalls_at50) + mean(recalls_at10)) / 2
+    # })
+
+    # print(json.dumps(results_dict, indent=4))
 
 
 
@@ -143,7 +169,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", type=str, required=True, help="should be either 'CIRR' or 'fashionIQ'")
     parser.add_argument("--blip-model-name", default="blip2_cir_rerank_learn", type=str)
     parser.add_argument("--backbone", type=str, default="pretrain", help="pretrain for vit-g, pretrain_vitL for vit-l")
-    parser.add_argument("--model-path", type=str)
+    #parser.add_argument("--model-path", type=str)
 
     args = parser.parse_args()
     if args.dataset.lower() not in ['fashioniq', 'cirr']:
@@ -152,4 +178,17 @@ if __name__ == '__main__':
     if args.dataset.lower() == 'cirr':
         blip_validate_cirr(args.blip_model_name, args.backbone, args.model_path)
     elif args.dataset.lower() == 'fashioniq':
-        clip_finetune_fiq(['dress', 'toptee', 'shirt'], args.blip_model_name, args.backbone, args.model_path)
+        clip_finetune_fiq([''], args.blip_model_name, args.backbone, args.model_path)
+
+    if options == "man-coat":
+        blip_validate_cirr()
+    elif options == "man-hoodie":
+        blip_
+
+def top_5_goods(gender, category):
+
+    clip_finetune_fiq(gender, [category], blip_model_name, backbone)
+
+
+##6개 옵션으로 나눔. 
+# {goods_name, goods_url}

@@ -45,16 +45,17 @@ def compute_fiq_val_metrics(relative_val_dataset: FashionIQDataset, blip_model, 
     sorted_indices = torch.argsort(distances, dim=-1).cpu()
     sorted_index_names = np.array(index_names)[sorted_indices]
 
-    # Compute the ground-truth labels wrt the predictions
-    labels = torch.tensor(
-        sorted_index_names == np.repeat(np.array(target_names), len(index_names)).reshape(len(target_names), -1))
-    assert torch.equal(torch.sum(labels, dim=-1).int(), torch.ones(len(target_names)).int())
+    # # Compute the ground-truth labels wrt the predictions
+    # labels = torch.tensor(
+    #     sorted_index_names == np.repeat(np.array(target_names), len(index_names)).reshape(len(target_names), -1))
+    # assert torch.equal(torch.sum(labels, dim=-1).int(), torch.ones(len(target_names)).int())
 
-    # Compute the metrics
-    recall_at10 = (torch.sum(labels[:, :10]) / len(labels)).item() * 100
-    recall_at50 = (torch.sum(labels[:, :50]) / len(labels)).item() * 100
+    # # Compute the metrics
+    # recall_at10 = (torch.sum(labels[:, :10]) / len(labels)).item() * 100
+    # recall_at50 = (torch.sum(labels[:, :50]) / len(labels)).item() * 100
 
-    return recall_at10, recall_at50
+    # 수정완완
+    return sorted_index_names[:5]
 
 def vis_fiq(sorted_index_names, reference_names, captions_all, labels, dress_type):
     base_path = os.path.join(os.getcwd(), f'fiq_main/vis{dress_type}')
