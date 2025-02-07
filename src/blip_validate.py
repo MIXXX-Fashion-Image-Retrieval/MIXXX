@@ -17,10 +17,10 @@ from lavis.models import load_model_and_preprocess
 from torch.optim.lr_scheduler import OneCycleLR
 
 
-from data_utils import base_path, squarepad_transform, targetpad_transform, CIRRDataset, FashionIQDataset
+from data_utils import base_path, squarepad_transform, targetpad_transform, CIRRDataset, MusinsaDataset, MusinsaRefDataset
 from utils import collate_fn, update_train_running_results, set_train_bar_description, extract_index_blip_features, \
     save_model, generate_randomized_fiq_caption, element_wise_sum, device
-from validate_blip import compute_cirr_val_metrics, compute_fiq_val_metrics
+from validate_blip import compute_cirr_val_metrics, compute_fiq_val_metrics, compute_fiq_val_ranking
 
 
 def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, model_path):
@@ -56,100 +56,69 @@ def clip_finetune_fiq(val_dress_types: List[str], blip_model_name, backbone, mod
     idx_to_dress_mapping = {}
     relative_val_datasets = []
     classic_val_datasets = []
+    classic_val_ref_datasets = []
 
 
     # Define the validation datasets
     for idx, dress_type in enumerate(val_dress_types):
         idx_to_dress_mapping[idx] = dress_type
-        relative_val_dataset = FashionIQDataset('val', [dress_type], 'relative', preprocess, )
+        relative_val_dataset = MusinsaDataset('inference', [dress_type], 'relative', preprocess, )
         relative_val_datasets.append(relative_val_dataset)
-        classic_val_dataset = FashionIQDataset('val', [dress_type], 'classic', preprocess, )
+        classic_val_dataset = MusinsaDataset('inference', [dress_type], 'classic', preprocess, )
         classic_val_datasets.append(classic_val_dataset)
+        classic_val_ref_dataset = MusinsaRefDataset('inference', [dress_type], 'classic', preprocess, )
+        classic_val_ref_datasets.append(classic_val_ref_dataset)
 
 
 
     blip_model.eval()
-    recalls_at10 = []
-    recalls_at50 = []
 
     # Compute and log validation metrics for each validation dataset (which corresponds to a different
     # FashionIQ category)
     for relative_val_dataset, classic_val_dataset, idx in zip(relative_val_datasets, classic_val_datasets,
                                                                 idx_to_dress_mapping):
-        
+        index_features_ref, index_names_ref = extract_index_blip_features(classic_val_ref_dataset, blip_model)
         index_features, index_names = extract_index_blip_features(classic_val_dataset, blip_model)
-        recall_at10, recall_at50 = compute_fiq_val_metrics(relative_val_dataset, blip_model,
-                                                            index_features, index_names, txt_processors)
+
+        index_features = list(index_features)
+        index_features[-1] = index_features_ref[-1]
+        index_features = tuple(index_features)
+
+        sorted_index_names = compute_fiq_val_ranking(relative_val_dataset, blip_model,
+                                                            index_features, index_names, index_names_ref, txt_processors)
         
-        recalls_at10.append(recall_at10)
-        recalls_at50.append(recall_at50)
+        
         torch.cuda.empty_cache()
 
-    results_dict = {}
-    for i in range(len(recalls_at10)):
-        results_dict[f'{idx_to_dress_mapping[i]}_recall_at10'] = recalls_at10[i]
-        results_dict[f'{idx_to_dress_mapping[i]}_recall_at50'] = recalls_at50[i]
-    results_dict.update({
-        f'average_recall_at10': mean(recalls_at10),
-        f'average_recall_at50': mean(recalls_at50),
-        f'average_recall': (mean(recalls_at50) + mean(recalls_at10)) / 2
-    })
 
-    print(json.dumps(results_dict, indent=4))
+
+        return sorted_index_names
 
 
 
+# if __name__ == '__main__':
+#     parser = ArgumentParser()
+#     parser.add_argument("--dataset", type=str, required=True, help="should be either 'CIRR' or 'fashionIQ'")
+#     parser.add_argument("--blip-model-name", default="blip2_cir_rerank_learn", type=str)
+#     parser.add_argument("--backbone", type=str, default="pretrain", help="pretrain for vit-g, pretrain_vitL for vit-l")
+#     parser.add_argument("--model-path", type=str)
 
-def blip_validate_cirr(blip_model_name, backbone, blip_model_path):
-    blip_model, _, txt_processors = load_model_and_preprocess(name=blip_model_name, model_type=backbone, is_eval=False, device=device)
-    checkpoint_path = blip_model_path
+#     args = parser.parse_args()
+#     if args.dataset.lower() not in ['fashioniq', 'cirr']:
+#         raise ValueError("Dataset should be either 'CIRR' or 'FashionIQ")
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    msg = blip_model.load_state_dict(checkpoint[blip_model.__class__.__name__], strict=False)
-    print("Missing keys {}".format(msg.missing_keys))
+#     if args.dataset.lower() == 'cirr':
+#         blip_validate_cirr(args.blip_model_name, args.backbone, args.model_path)
+#     elif args.dataset.lower() == 'fashioniq':
+#         clip_finetune_fiq(['dress', 'toptee', 'shirt'], args.blip_model_name, args.backbone, args.model_path)
+def main():
+    dataset = 'fashionIQ'
+    blip_model_name = "blip2_cir_align_prompt"
+    backbone = "pretrain"
+    model_path = "models/men_hoodie/saved_models/tuned_clip_best.pt"
 
-    input_dim = 224
-
-    preprocess = targetpad_transform(1.25, input_dim)
-
-    # Define the validation datasets
-    relative_val_dataset = CIRRDataset('val', 'relative', preprocess)
-    classic_val_dataset = CIRRDataset('val', 'classic', preprocess)
-
-    val_index_features, val_index_names = extract_index_blip_features(classic_val_dataset, blip_model)
-    # 
-    results = compute_cirr_val_metrics(relative_val_dataset, blip_model, val_index_features,
-                                        val_index_names, txt_processors)
-    group_recall_at1, group_recall_at2, group_recall_at3, recall_at1, recall_at5, recall_at10, recall_at50 = results
-    results_dict = {
-        'group_recall_at1': group_recall_at1,
-        'group_recall_at2': group_recall_at2,
-        'group_recall_at3': group_recall_at3,
-        'recall_at1': recall_at1,
-        'recall_at5': recall_at5,
-        'recall_at10': recall_at10,
-        'recall_at50': recall_at50,
-        'mean(R@5+R_s@1)': (group_recall_at1 + recall_at5) / 2,
-        'arithmetic_mean': mean(results),
-        'harmonic_mean': harmonic_mean(results),
-        'geometric_mean': geometric_mean(results)
-    }
-    print(json.dumps(results_dict, indent=4))
-
-
+    sorted_index_names = clip_finetune_fiq(['hoodie'], blip_model_name, backbone, model_path)
+    print(sorted_index_names)
 
 if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument("--dataset", type=str, required=True, help="should be either 'CIRR' or 'fashionIQ'")
-    parser.add_argument("--blip-model-name", default="blip2_cir_rerank_learn", type=str)
-    parser.add_argument("--backbone", type=str, default="pretrain", help="pretrain for vit-g, pretrain_vitL for vit-l")
-    parser.add_argument("--model-path", type=str)
-
-    args = parser.parse_args()
-    if args.dataset.lower() not in ['fashioniq', 'cirr']:
-        raise ValueError("Dataset should be either 'CIRR' or 'FashionIQ")
-
-    if args.dataset.lower() == 'cirr':
-        blip_validate_cirr(args.blip_model_name, args.backbone, args.model_path)
-    elif args.dataset.lower() == 'fashioniq':
-        clip_finetune_fiq(['dress', 'toptee', 'shirt'], args.blip_model_name, args.backbone, args.model_path)
+    main()
