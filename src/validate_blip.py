@@ -20,9 +20,8 @@ import cv2
 import json
 from statistics import mean, geometric_mean, harmonic_mean
 
-
-def compute_fiq_val_metrics(relative_val_dataset: FashionIQDataset, blip_model, index_features: torch.tensor,
-                            index_names: List[str], txt_processors, save_memory=False) -> Tuple[float, float]:
+def compute_fiq_val_ranking(relative_val_dataset: FashionIQDataset, blip_model, index_features: torch.tensor,
+                            index_names: List[str], index_names_ref: List[str], txt_processors, save_memory=True) -> Tuple[float, float]:
     """
     Compute validation metrics on FashionIQ dataset
     :param relative_val_dataset: FashionIQ validation dataset in relative mode
@@ -36,7 +35,33 @@ def compute_fiq_val_metrics(relative_val_dataset: FashionIQDataset, blip_model, 
 
     # Generate predictions
     pred_sim, target_names, reference_names, captions_all = generate_fiq_val_predictions(blip_model, relative_val_dataset,
-                                                                    index_names, index_features, txt_processors, save_memory)
+                                                                    index_names_ref, index_features, txt_processors, save_memory)
+
+    print(f"Compute FashionIQ {relative_val_dataset.dress_types} validation metrics")
+
+    # Compute the distances and sort the results
+    distances = 1 - pred_sim
+    sorted_indices = torch.argsort(distances, dim=-1).cpu()
+    sorted_index_names = np.array(index_names)[sorted_indices]
+    
+    return sorted_index_names[:,:5]
+                              
+def compute_fiq_val_metrics(relative_val_dataset: FashionIQDataset, blip_model, index_features: torch.tensor,
+                            index_names: List[str], index_names_ref: List[str], txt_processors, save_memory=False) -> Tuple[float, float]:
+    """
+    Compute validation metrics on FashionIQ dataset
+    :param relative_val_dataset: FashionIQ validation dataset in relative mode
+    :param clip_model: CLIP model
+    :param index_features: validation index features
+    :param index_names: validation index names
+    :param combining_function: function which takes as input (image_features, text_features) and outputs the combined
+                            features
+    :return: the computed validation metrics
+    """
+
+    # Generate predictions
+    pred_sim, target_names, reference_names, captions_all = generate_fiq_val_predictions(blip_model, relative_val_dataset,
+                                                                    index_names_ref, index_features, txt_processors, save_memory)
 
     print(f"Compute FashionIQ {relative_val_dataset.dress_types} validation metrics")
 
@@ -180,8 +205,8 @@ def generate_fiq_val_predictions(blip_model, relative_val_dataset: FashionIQData
         # Concatenate the captions in a deterministic way
         flattened_captions: list = np.array(captions).T.flatten().tolist()
         input_captions = [
-            f"{flattened_captions[i].strip('.?, ').capitalize()} and {flattened_captions[i + 1].strip('.?, ')}" for
-            i in range(0, len(flattened_captions), 2)]
+            f"{flattened_captions[i].strip('.?, ').capitalize()}" for
+            i in range(0, len(flattened_captions))]
         input_captions = [txt_processors["eval"](caption) for caption in input_captions]
         # Compute the predicted features
         with torch.no_grad():
