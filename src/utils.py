@@ -123,18 +123,8 @@ def generate_randomized_fiq_caption(flattened_captions: List[str]) -> List[str]:
     :return: the randomized caption list (with length = batch_size)
     """
     captions = []
-    for i in range(0, len(flattened_captions), 2):
-        random_num = random.random()
-        if random_num < 0.25:
-            captions.append(
-                f"{flattened_captions[i].strip('.?, ').capitalize()} and {flattened_captions[i + 1].strip('.?, ')}")
-        elif 0.25 < random_num < 0.5:
-            captions.append(
-                f"{flattened_captions[i + 1].strip('.?, ').capitalize()} and {flattened_captions[i].strip('.?, ')}")
-        elif 0.5 < random_num < 0.75:
-            captions.append(f"{flattened_captions[i].strip('.?, ').capitalize()}")
-        else:
-            captions.append(f"{flattened_captions[i + 1].strip('.?, ').capitalize()}")
+    for i in range(0, len(flattened_captions)):
+    captions.append(f"{flattened_captions[i].strip('.?, ').capitalize()}")
     return captions
 
 
