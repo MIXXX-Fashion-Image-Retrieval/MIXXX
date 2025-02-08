@@ -105,6 +105,399 @@ def targetpad_transform(target_ratio: float, dim: int):
     ])
 
 
+class MusinsaRefDataset(Dataset):
+    """
+    Musinsa dataset class which manage Musinsa data.
+    The dataset can be used in 'relative' or 'classic' mode:
+        - In 'classic' mode the dataset yield tuples made of (image_name, image)
+        - In 'relative' mode the dataset yield tuples made of:
+            - (reference_image, target_image, image_captions) when split == train
+            - (reference_name, target_name, image_captions) when split == val
+            - (reference_name, reference_image, image_captions) when split == test
+    The dataset manage an arbitrary numbers of Musinsa category, e.g. only dress, dress+toptee+shirt, dress+shirt...
+    """
+
+    def __init__(self, split: str, dress_types: List[str], mode: str, preprocess: callable):
+        """
+        :param split: dataset split, should be in ['test', 'train', 'val']
+        :param dress_types: list of Musinsa category
+        :param mode: dataset mode, should be in ['relative', 'classic']:
+            - In 'classic' mode the dataset yield tuples made of (image_name, image)
+            - In 'relative' mode the dataset yield tuples made of:
+                - (reference_image, target_image, image_captions) when split == train
+                - (reference_name, target_name, image_captions) when split == val
+                - (reference_name, reference_image, image_captions) when split == test
+        :param preprocess: function which preprocesses the image
+        """
+        self.mode = mode
+        self.dress_types = dress_types
+        self.split = split
+
+        if mode not in ['relative', 'classic']:
+            raise ValueError("mode should be in ['relative', 'classic']")
+        if split not in ['test', 'train', 'val', 'inference']:
+            raise ValueError("split should be in ['test', 'train', 'val']")
+        for dress_type in dress_types:
+            if dress_type not in ['hoodie', 'coat', 'jeans']:
+                raise ValueError("dress_type should be in ['hoodie', 'coat', 'jeans']")
+
+        self.preprocess = preprocess
+
+        # get triplets made by (reference_image, target_image, a pair of relative captions)
+        self.triplets: List[dict] = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'men' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
+                self.triplets.extend(json.load(f))
+
+        # get the image names
+        self.image_names: list = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'men' / 'image_splits' / f'split.{dress_type}.{split}.json') as f:
+                self.image_names.extend(json.load(f))
+
+        print(f"FashionIQ {split} - {dress_types} dataset in {mode} mode initialized")
+
+    def __getitem__(self, index):
+        try:
+            if self.mode == 'relative':
+                image_captions = self.triplets[index]['captions']
+                reference_name = self.triplets[index]['candidate']
+
+                if self.split == 'train':
+                    reference_image_path = base_path / 'musinsa' / 'snap' / 'men' / f"{self.dress_types[0]}" / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    target_name = self.triplets[index]['target']
+                    target_image_path = base_path / 'musinsa' / 'goods' / 'men' / f"{self.dress_types[0]}" / f"{target_name}.jpg"
+                    target_image = self.preprocess(PIL.Image.open(target_image_path))
+                    return reference_image, target_image, image_captions
+
+                elif self.split == 'val':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+                elif self.split == 'test':
+                    reference_image_path = base_path / 'musinsa' / 'images' / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    return reference_name, reference_image, image_captions
+                
+                elif self.split == 'inference':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+            elif self.mode == 'classic':
+                image_name = self.triplets[index]['candidate']
+                image_path = base_path / 'musinsa' / 'snap' / 'men' / f"{self.dress_types[0]}" / f"{image_name}.jpg"
+                image = self.preprocess(PIL.Image.open(image_path))
+                return image_name, image
+
+            else:
+                raise ValueError("mode should be in ['relative', 'classic']")
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    def __len__(self):
+        if self.mode == 'relative':
+            return len(self.triplets)
+        elif self.mode == 'classic':
+            return len(self.image_names)
+        else:
+            raise ValueError("mode should be in ['relative', 'classic']")
+
+class MusinsaDataset(Dataset):
+    """
+    Musinsa dataset class which manage Musinsa data.
+    The dataset can be used in 'relative' or 'classic' mode:
+        - In 'classic' mode the dataset yield tuples made of (image_name, image)
+        - In 'relative' mode the dataset yield tuples made of:
+            - (reference_image, target_image, image_captions) when split == train
+            - (reference_name, target_name, image_captions) when split == val
+            - (reference_name, reference_image, image_captions) when split == test
+    The dataset manage an arbitrary numbers of Musinsa category, e.g. only dress, dress+toptee+shirt, dress+shirt...
+    """
+
+    def __init__(self, split: str, dress_types: List[str], mode: str, preprocess: callable):
+        """
+        :param split: dataset split, should be in ['test', 'train', 'val']
+        :param dress_types: list of Musinsa category
+        :param mode: dataset mode, should be in ['relative', 'classic']:
+            - In 'classic' mode the dataset yield tuples made of (image_name, image)
+            - In 'relative' mode the dataset yield tuples made of:
+                - (reference_image, target_image, image_captions) when split == train
+                - (reference_name, target_name, image_captions) when split == val
+                - (reference_name, reference_image, image_captions) when split == test
+        :param preprocess: function which preprocesses the image
+        """
+        self.mode = mode
+        self.dress_types = dress_types
+        self.split = split
+
+        if mode not in ['relative', 'classic']:
+            raise ValueError("mode should be in ['relative', 'classic']")
+        if split not in ['test', 'train', 'val', 'inference']:
+            raise ValueError("split should be in ['test', 'train', 'val']")
+        for dress_type in dress_types:
+            if dress_type not in ['hoodie', 'coat', 'jeans']:
+                raise ValueError("dress_type should be in ['hoodie', 'coat', 'jeans']")
+
+        self.preprocess = preprocess
+
+        # get triplets made by (reference_image, target_image, a pair of relative captions)
+        self.triplets: List[dict] = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'men' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
+                self.triplets.extend(json.load(f))
+
+        # get the image names
+        self.image_names: list = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'men' / 'image_splits' / f'split.{dress_type}.{split}.json') as f:
+                self.image_names.extend(json.load(f))
+
+        print(f"FashionIQ {split} - {dress_types} dataset in {mode} mode initialized")
+
+    def __getitem__(self, index):
+        try:
+            if self.mode == 'relative':
+                image_captions = self.triplets[index]['captions']
+                reference_name = self.triplets[index]['candidate']
+
+                if self.split == 'train':
+                    reference_image_path = base_path / 'musinsa' / 'snap' / 'men' / f"{self.dress_types[0]}" / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    target_name = self.triplets[index]['target']
+                    target_image_path = base_path / 'musinsa' / 'goods' / 'men' / f"{self.dress_types[0]}" / f"{target_name}.jpg"
+                    target_image = self.preprocess(PIL.Image.open(target_image_path))
+                    return reference_image, target_image, image_captions
+
+                elif self.split == 'val':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+                elif self.split == 'test':
+                    reference_image_path = base_path / 'musinsa' / 'images' / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    return reference_name, reference_image, image_captions
+
+                elif self.split == 'inference':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+            elif self.mode == 'classic':
+                image_name = self.image_names[index]
+                image_path = base_path / 'musinsa' / 'goods' / 'men' / f"{self.dress_types[0]}" / f"{image_name}.jpg"
+                image = self.preprocess(PIL.Image.open(image_path))
+                return image_name, image
+
+            else:
+                raise ValueError("mode should be in ['relative', 'classic']")
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    def __len__(self):
+        if self.mode == 'relative':
+            return len(self.triplets)
+        elif self.mode == 'classic':
+            return len(self.image_names)
+        else:
+            raise ValueError("mode should be in ['relative', 'classic']")
+
+
+class WusinsaRefDataset(Dataset):
+    """
+    Musinsa dataset class which manage Musinsa data.
+    The dataset can be used in 'relative' or 'classic' mode:
+        - In 'classic' mode the dataset yield tuples made of (image_name, image)
+        - In 'relative' mode the dataset yield tuples made of:
+            - (reference_image, target_image, image_captions) when split == train
+            - (reference_name, target_name, image_captions) when split == val
+            - (reference_name, reference_image, image_captions) when split == test
+    The dataset manage an arbitrary numbers of Musinsa category, e.g. only dress, dress+toptee+shirt, dress+shirt...
+    """
+
+    def __init__(self, split: str, dress_types: List[str], mode: str, preprocess: callable):
+        """
+        :param split: dataset split, should be in ['test', 'train', 'val']
+        :param dress_types: list of Musinsa category
+        :param mode: dataset mode, should be in ['relative', 'classic']:
+            - In 'classic' mode the dataset yield tuples made of (image_name, image)
+            - In 'relative' mode the dataset yield tuples made of:
+                - (reference_image, target_image, image_captions) when split == train
+                - (reference_name, target_name, image_captions) when split == val
+                - (reference_name, reference_image, image_captions) when split == test
+        :param preprocess: function which preprocesses the image
+        """
+        self.mode = mode
+        self.dress_types = dress_types
+        self.split = split
+
+        if mode not in ['relative', 'classic']:
+            raise ValueError("mode should be in ['relative', 'classic']")
+        if split not in ['test', 'train', 'val', 'inference']:
+            raise ValueError("split should be in ['test', 'train', 'val']")
+        for dress_type in dress_types:
+            if dress_type not in ['hoodie', 'coat', 'jeans']:
+                raise ValueError("dress_type should be in ['hoodie', 'coat', 'jeans']")
+
+        self.preprocess = preprocess
+
+        # get triplets made by (reference_image, target_image, a pair of relative captions)
+        self.triplets: List[dict] = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'women' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
+                self.triplets.extend(json.load(f))
+
+        # get the image names
+        self.image_names: list = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'women' / 'image_splits' / f'split.{dress_type}.{split}.json') as f:
+                self.image_names.extend(json.load(f))
+
+        print(f"FashionIQ {split} - {dress_types} dataset in {mode} mode initialized")
+
+    def __getitem__(self, index):
+        try:
+            if self.mode == 'relative':
+                image_captions = self.triplets[index]['captions']
+                reference_name = self.triplets[index]['candidate']
+
+                if self.split == 'train':
+                    reference_image_path = base_path / 'musinsa' / 'snap' / 'women' / f"{self.dress_types[0]}" / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    target_name = self.triplets[index]['target']
+                    target_image_path = base_path / 'musinsa' / 'goods' / 'women' / f"{self.dress_types[0]}" / f"{target_name}.jpg"
+                    target_image = self.preprocess(PIL.Image.open(target_image_path))
+                    return reference_image, target_image, image_captions
+
+                elif self.split == 'val':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+                elif self.split == 'test':
+                    reference_image_path = base_path / 'musinsa' / 'images' / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    return reference_name, reference_image, image_captions
+                
+                elif self.split == 'inference':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+            elif self.mode == 'classic':
+                image_name = self.triplets[index]['candidate']
+                image_path = base_path / 'musinsa' / 'snap' / 'women' / f"{self.dress_types[0]}" / f"{image_name}.jpg"
+                image = self.preprocess(PIL.Image.open(image_path))
+                return image_name, image
+
+            else:
+                raise ValueError("mode should be in ['relative', 'classic']")
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    def __len__(self):
+        if self.mode == 'relative':
+            return len(self.triplets)
+        elif self.mode == 'classic':
+            return len(self.image_names)
+        else:
+            raise ValueError("mode should be in ['relative', 'classic']")
+
+class WusinsaDataset(Dataset):
+    """
+    Musinsa dataset class which manage Musinsa data.
+    The dataset can be used in 'relative' or 'classic' mode:
+        - In 'classic' mode the dataset yield tuples made of (image_name, image)
+        - In 'relative' mode the dataset yield tuples made of:
+            - (reference_image, target_image, image_captions) when split == train
+            - (reference_name, target_name, image_captions) when split == val
+            - (reference_name, reference_image, image_captions) when split == test
+    The dataset manage an arbitrary numbers of Musinsa category, e.g. only dress, dress+toptee+shirt, dress+shirt...
+    """
+
+    def __init__(self, split: str, dress_types: List[str], mode: str, preprocess: callable):
+        """
+        :param split: dataset split, should be in ['test', 'train', 'val']
+        :param dress_types: list of Musinsa category
+        :param mode: dataset mode, should be in ['relative', 'classic']:
+            - In 'classic' mode the dataset yield tuples made of (image_name, image)
+            - In 'relative' mode the dataset yield tuples made of:
+                - (reference_image, target_image, image_captions) when split == train
+                - (reference_name, target_name, image_captions) when split == val
+                - (reference_name, reference_image, image_captions) when split == test
+        :param preprocess: function which preprocesses the image
+        """
+        self.mode = mode
+        self.dress_types = dress_types
+        self.split = split
+
+        if mode not in ['relative', 'classic']:
+            raise ValueError("mode should be in ['relative', 'classic']")
+        if split not in ['test', 'train', 'val', 'inference']:
+            raise ValueError("split should be in ['test', 'train', 'val']")
+        for dress_type in dress_types:
+            if dress_type not in ['hoodie', 'coat', 'jeans']:
+                raise ValueError("dress_type should be in ['hoodie', 'coat', 'jeans']")
+
+        self.preprocess = preprocess
+
+        # get triplets made by (reference_image, target_image, a pair of relative captions)
+        self.triplets: List[dict] = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'women' / 'captions' / f'cap.{dress_type}.{split}.json') as f:
+                self.triplets.extend(json.load(f))
+
+        # get the image names
+        self.image_names: list = []
+        for dress_type in dress_types:
+            with open(base_path / 'musinsa' / 'women' / 'image_splits' / f'split.{dress_type}.{split}.json') as f:
+                self.image_names.extend(json.load(f))
+
+        print(f"FashionIQ {split} - {dress_types} dataset in {mode} mode initialized")
+
+    def __getitem__(self, index):
+        try:
+            if self.mode == 'relative':
+                image_captions = self.triplets[index]['captions']
+                reference_name = self.triplets[index]['candidate']
+
+                if self.split == 'train':
+                    reference_image_path = base_path / 'musinsa' / 'snap' / 'women' / f"{self.dress_types[0]}" / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    target_name = self.triplets[index]['target']
+                    target_image_path = base_path / 'musinsa' / 'goods' / 'women' / f"{self.dress_types[0]}" / f"{target_name}.jpg"
+                    target_image = self.preprocess(PIL.Image.open(target_image_path))
+                    return reference_image, target_image, image_captions
+
+                elif self.split == 'val':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+                elif self.split == 'test':
+                    reference_image_path = base_path / 'musinsa' / 'images' / f"{reference_name}.jpg"
+                    reference_image = self.preprocess(PIL.Image.open(reference_image_path))
+                    return reference_name, reference_image, image_captions
+
+                elif self.split == 'inference':
+                    target_name = self.triplets[index]['target']
+                    return reference_name, target_name, image_captions
+
+            elif self.mode == 'classic':
+                image_name = self.image_names[index]
+                image_path = base_path / 'musinsa' / 'goods' / 'women' / f"{self.dress_types[0]}" / f"{image_name}.jpg"
+                image = self.preprocess(PIL.Image.open(image_path))
+                return image_name, image
+
+            else:
+                raise ValueError("mode should be in ['relative', 'classic']")
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    def __len__(self):
+        if self.mode == 'relative':
+            return len(self.triplets)
+        elif self.mode == 'classic':
+            return len(self.image_names)
+        else:
+            raise ValueError("mode should be in ['relative', 'classic']")
+
 class FashionIQDataset(Dataset):
     """
     FashionIQ dataset class which manage FashionIQ data.
